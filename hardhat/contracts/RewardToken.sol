@@ -13,7 +13,7 @@ contract RewardToken is ERC20, Ownable{
         _mint(msg.sender, maxTotalSupply);
     }
 
-    function Withdraw() public onlyOwner {
+    function withdraw() public onlyOwner {
         address _owner = owner();
         uint256 balance = address(this).balance;
         (bool success, ) = _owner.call{value: balance}("");

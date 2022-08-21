@@ -31,7 +31,7 @@ describe("deploy RewardToken contract", function() {
         const balanceBefore = await ethers.provider.getBalance(owner.address)
         expect(contractBalanceBefore).to.be.equal(ethers.utils.parseEther("1.0"))
 
-        await deployed.Withdraw();
+        await deployed.withdraw();
 
         expect(await await ethers.provider.getBalance(deployed.address)).to.equal(0)
         expect(await ethers.provider.getBalance(owner.address)).to.be.greaterThan(balanceBefore)
