@@ -17,23 +17,31 @@ describe("deploy RewardToken contract", function() {
         console.log("RewardToken deployed to:", deployed.address)
     })
 
-    it("Should mint 10000 tokens to the deployer", async function() {
-        expect(await deployed.balanceOf(owner.address)).to.equal(ethers.utils.parseUnits("10000", 18))
-        expect(await deployed.balanceOf(other.address)).to.equal(0)
-    })
-
-    it("can withdraw funds", async function() {
-        await owner.sendTransaction({
-            to: deployed.address,
-            value: ethers.utils.parseEther("1.0")
+    describe("deploy", function () {
+        it("mints 10000 tokens to the deployer", async function() {
+            expect(await deployed.balanceOf(owner.address)).to.equal(ethers.utils.parseUnits("10000", 18))
+            expect(await deployed.balanceOf(other.address)).to.equal(0)
         })
-        const contractBalanceBefore = await ethers.provider.getBalance(deployed.address)
-        const balanceBefore = await ethers.provider.getBalance(owner.address)
-        expect(contractBalanceBefore).to.be.equal(ethers.utils.parseEther("1.0"))
-
-        await deployed.withdraw();
-
-        expect(await await ethers.provider.getBalance(deployed.address)).to.equal(0)
-        expect(await ethers.provider.getBalance(owner.address)).to.be.greaterThan(balanceBefore)
     })
-})
+
+    describe("withdraw", function () {
+        it("can withdraw funds", async function () {
+            await owner.sendTransaction({
+                to: deployed.address,
+                value: ethers.utils.parseEther("1.0")
+            })
+            const contractBalanceBefore = await ethers.provider.getBalance(deployed.address)
+            const balanceBefore = await ethers.provider.getBalance(owner.address)
+            expect(contractBalanceBefore).to.be.equal(ethers.utils.parseEther("1.0"))
+
+            await deployed.withdraw();
+
+            expect(await await ethers.provider.getBalance(deployed.address)).to.equal(0)
+            expect(await ethers.provider.getBalance(owner.address)).to.be.greaterThan(balanceBefore)
+        })
+
+        it("reverts if called by non-owner", async function () {
+            await expect(deployed.connect(other).withdraw()
+            ).to.be.revertedWith("Ownable: caller is not the owner")
+        })
+    })})
