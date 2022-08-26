@@ -29,6 +29,68 @@ export default function Home() {
     }
   };
 
+  const sendTokensToContract = async () => {
+    setLoading(true)
+    const provider = await getProviderOrSigner(true);
+    const contract = new Contract(
+      rewardTokenContractAddress,
+      rewardTokenABI,
+      provider
+    );
+
+    setLoading(true)
+    try {
+      const tx = await contract.transfer(rewardTokenContractAddress, utils.parseEther("100"));
+      await tx.wait();
+    }
+    catch {
+      window.alert("Failed to send tokens.")
+    }
+    setLoading(false)
+  };
+
+  const updateNFTBalances = async () => {
+    try {
+      const provider = await getProviderOrSigner(true);
+      const contract = new Contract(nftContractAddress, nftABI, provider);
+
+      const userBalance = await contract.balanceOf(await provider.getAddress());
+      const contractBalance = await contract.tokenId();
+
+      setNFTBalance(utils.formatEther(userBalance, 0));
+      setMintedNFTS(utils.formatEther(contractBalance, 0));
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  const mint = async () => {
+    setLoading(true)
+    const provider = await getProviderOrSigner(true);
+    const contract = new Contract(
+      nftContractAddress,
+      nftABI,
+      provider
+    );
+
+    if (await contract.tokenId() < await contract.maxTokenIds()) {
+      setLoading(true)
+      try {
+        const tx = await contract.mint({
+          value: await contract.price(),
+        })
+        await tx.wait()
+      }
+      catch {
+        window.alert("Failed to mint NFT.")
+      }
+      setLoading(false)
+    } else {
+      window.alert("All NFTs have been minted")
+    }
+
+  };
+
   const getProviderOrSigner = async (needSigner = false) => {
     const provider = await web3ModalRef.current.connect();
     const web3Provider = new providers.Web3Provider(provider);
@@ -46,19 +108,23 @@ export default function Home() {
     return web3Provider;
   };
 
-  const updateRewardTokenBalences = async () => {
+  const updateTokenBalances = async () => {
     try {
       const provider = await getProviderOrSigner(true);
-      const rewardTokenContract = new Contract(rewardTokenContractAddress, rewardTokenABI, provider);
+      const contract = new Contract(rewardTokenContractAddress, rewardTokenABI, provider);
 
-      const user = await rewardTokenContract.balanceOf(await provider.getAddress());
-      const contract = await rewardTokenContract.balanceOf(rewardTokenContractAddress);
+      const userBalance = await contract.balanceOf(await provider.getAddress());
+      const contractBalance = await contract.balanceOf(rewardTokenContractAddress);
 
-      setUserTokenBalance(utils.formatUnits(user, await rewardTokenContract.decimals()));
-      setContractTokenBalance(utils.formatUnits(contract, await rewardTokenContract.decimals()));
+      setUserTokenBalance(utils.formatUnits(userBalance, await contract.decimals()));
+      setContractTokenBalance(utils.formatUnits(contractBalance, await contract.decimals()));
     } catch (err) {
       console.error(err);
     }
+  }
+
+  const Button = ({ title, onClick }) => {
+    return <button disabled={loading ? "disabled" : ""} onClick={loading ? function () { } : onClick}>{title}</button>
   }
 
   useEffect(() => {
@@ -70,9 +136,12 @@ export default function Home() {
       });
 
       connectWallet();
-      updateRewardTokenBalences()
+      updateTokenBalances()
+      updateNFTBalances();
+
       setInterval(async function () {
-        await updateRewardTokenBalences();
+        await updateTokenBalances();
+        await updateNFTBalances();
       }, 5000);
     }
   }, [walletConnected]);
@@ -84,10 +153,10 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <div>
-        <label>WalletConnected: {walletConnected}</label>
+        <label>WalletConnected: {walletConnected ? "true" : "false"}</label>
       </div>
       <div>
-        <label>loading: {loading}</label>
+        <label>loading: {loading ? "true" : "false"}</label>
       </div>
       <div>
         <label>userTokenBalance: {userTokenBalance}</label>
@@ -100,6 +169,11 @@ export default function Home() {
       </div>
       <div>
         <label>mintedNFTS: {mintedNFTS}</label>
+      </div>
+      <div>
+        <Button title={"Mint"} onClick={mint} />
+        <Button title={"Send 100 to contract"} onClick={sendTokensToContract} />
+        <Button title={"Connect"} onClick={connectWallet} />
       </div>
     </div>
   );
