@@ -10,7 +10,6 @@ import {
   rewardTokenABI,
   nftABI
 } from "../constants";
-import { useMoralis } from "react-moralis";
 
 export default function Home() {
   const [walletConnected, setWalletConnected] = useState(false);
