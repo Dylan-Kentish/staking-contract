@@ -2,28 +2,22 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-error contractPaused();
 error missingToken();
 error insufficientFunds();
 error exceededMaxSupply();
 error withdrawFailed();
 
-contract NFT is ERC721Enumerable, Ownable {
+contract NFT is ERC721Enumerable, Ownable, Pausable {
     using Strings for uint256;
 
     string baseTokenURI;
     uint256 public price = 0.01 ether;
     uint256 public maxTokenIds = 10;
     uint256 public tokenId;
-    bool public isPaused;
-
-    modifier pause() {
-        if(isPaused) revert contractPaused();
-        _;
-    }
 
     constructor(string memory baseURI) ERC721("NonFungibleToken", "NFT") {
         baseTokenURI = baseURI;
@@ -42,7 +36,9 @@ contract NFT is ERC721Enumerable, Ownable {
             "";
     }
 
-    function mint() public payable pause {
+    function mint() public payable whenNotPaused {
+        _pause();
+
         if (tokenId >= maxTokenIds) revert exceededMaxSupply();
         if (msg.value < price) revert insufficientFunds();
 
@@ -51,10 +47,8 @@ contract NFT is ERC721Enumerable, Ownable {
         }
 
         _safeMint(msg.sender, tokenId);
-    }
 
-    function setPaused(bool paused) public onlyOwner {
-        isPaused = paused;
+        _unpause();
     }
     
     function withdraw() public onlyOwner {
@@ -62,6 +56,10 @@ contract NFT is ERC721Enumerable, Ownable {
         uint256 balance = address(this).balance;
         (bool success, ) = _owner.call{value: balance}("");
         if (!success) revert withdrawFailed();
+    }
+
+    function setPaused(bool paused) public onlyOwner {
+        paused ? _pause() : _unpause();
     }
 
     receive() external payable {}
